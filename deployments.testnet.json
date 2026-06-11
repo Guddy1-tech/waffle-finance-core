@@ -1,0 +1,38 @@
+{
+  "network": "testnet",
+  "ethereum": {
+    "chainId": 11155111,
+    "name": "Sepolia",
+    "rpcUrl": "https://ethereum-sepolia-rpc.publicnode.com",
+    "contracts": {
+      "HTLCEscrow": "0xb352339BEb146f2699d28D736700B953988bB178",
+      "ResolverRegistry": "0x7D9ce70Aa40E144E8BbE266a0dc3b3F91B6D1D99"
+    },
+    "deployedAt": "2026-05-14",
+    "deployer": "0x686Be1DEF4b9Bd725A5Df07505E25a94Fa71394c"
+  },
+  "stellar": {
+    "passphrase": "Test SDF Network ; September 2015",
+    "horizon": "https://horizon-testnet.stellar.org",
+    "rpc": "https://soroban-testnet.stellar.org",
+    "contracts": {
+      "HTLC": "CDIKSJKVMXKGBRD3BBEBMF7Q4GQJ52ECU6R6G5HEKXKXVGGWK2CTA6JK",
+      "ResolverRegistry": "CBSR7Z4MHLPMLFFM5K3PK3YLZAVCOMJ4KPVRWO4VPL3FF64MSTIZ4WGF"
+    },
+    "deployedAt": "2026-05-14",
+    "deployer": "GC4VWBK5QSJCBSRWIZJYWCF2SJAPCKU3OFHH4XK7ZBTZ5HCK7VYLU6FL",
+    "deployTransactions": {
+      "HTLC": "f7583c2cca3ca542a4754677e98f1ce9c4e1fa93ebe534ed094110b0e58201d7",
+      "ResolverRegistry": "1532a403acc488b651692b6d26fd393535014176b6905909e8d133cf475875d7",
+      "ResolverRegistryInitialize": "e5e353b6d6b2b6f6e6a88661c199418551508acf558d1799f0d1e184aa23d535"
+    },
+    "resolverRegistryConfig": {
+      "admin": "GC4VWBK5QSJCBSRWIZJYWCF2SJAPCKU3OFHH4XK7ZBTZ5HCK7VYLU6FL",
+      "stakeAsset": "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC",
+      "stakeAssetName": "native XLM SAC",
+      "minStake": "1000000000",
+      "minStakeXLM": "100",
+      "slashBeneficiary": "GC4VWBK5QSJCBSRWIZJYWCF2SJAPCKU3OFHH4XK7ZBTZ5HCK7VYLU6FL"
+    }
+  }
+}

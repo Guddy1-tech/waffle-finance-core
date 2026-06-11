@@ -1,0 +1,20 @@
+[package]
+name = "stelleth-htlc"
+description = "Hash time-lock contract for the Stelleth cross-chain bridge"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+
+[lib]
+crate-type = ["cdylib"]
+doctest = false
+
+[dependencies]
+soroban-sdk = { workspace = true }
+
+[dev-dependencies]
+soroban-sdk = { workspace = true, features = ["testutils"] }
+stelleth-resolver-registry = { path = "../resolver-registry" }

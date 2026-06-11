@@ -1,0 +1,49 @@
+{
+  "name": "@stelleth/sdk",
+  "version": "0.1.0",
+  "description": "TypeScript SDK for the Stelleth cross-chain bridge: Ethereum + Soroban HTLC clients, secret utilities, and a shared order state machine.",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./ethereum": {
+      "import": "./dist/ethereum/index.js",
+      "types": "./dist/ethereum/index.d.ts"
+    },
+    "./soroban": {
+      "import": "./dist/soroban/index.js",
+      "types": "./dist/soroban/index.d.ts"
+    },
+    "./secrets": {
+      "import": "./dist/secrets/index.js",
+      "types": "./dist/secrets/index.d.ts"
+    },
+    "./state-machine": {
+      "import": "./dist/state-machine/index.js",
+      "types": "./dist/state-machine/index.d.ts"
+    },
+    "./types": {
+      "import": "./dist/types/index.js",
+      "types": "./dist/types/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@stellar/stellar-sdk": "^13.0.0",
+    "viem": "^2.21.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0"
+  }
+}

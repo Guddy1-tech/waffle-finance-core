@@ -1,0 +1,20 @@
+{
+  "name": "@stelleth/e2e",
+  "version": "0.1.0",
+  "description": "Cross-chain differential test harness (EVM HTLCEscrow ↔ Soroban stelleth-htlc). Verifies the sha256 hashlock and preimage semantics round-trip across both chain clients using the shared @stelleth/sdk secret helpers.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@stelleth/sdk": "workspace:*",
+    "viem": "^2.21.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "typescript": "^5.3.0",
+    "vitest": "^2.1.0"
+  }
+}

@@ -1,0 +1,98 @@
+{
+  "uid": "stelleth-coordinator",
+  "title": "Stelleth Coordinator",
+  "tags": ["stelleth"],
+  "schemaVersion": 38,
+  "version": 1,
+  "refresh": "30s",
+  "time": { "from": "now-1h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Orders Total",
+      "gridPos": { "x": 0, "y": 0, "w": 6, "h": 4 },
+      "targets": [
+        {
+          "expr": "sum(coordinator_orders_total)",
+          "legendFormat": "total"
+        }
+      ],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] } }
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Orders by Status",
+      "gridPos": { "x": 6, "y": 0, "w": 10, "h": 8 },
+      "targets": [
+        {
+          "expr": "coordinator_orders_total",
+          "legendFormat": "{{status}}"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Ethereum Listener Last Block",
+      "gridPos": { "x": 0, "y": 4, "w": 6, "h": 4 },
+      "targets": [
+        {
+          "expr": "coordinator_listener_last_block{chain=\"ethereum\"}",
+          "legendFormat": "ethereum"
+        }
+      ],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] } }
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Soroban Listener Last Block",
+      "gridPos": { "x": 0, "y": 8, "w": 6, "h": 4 },
+      "targets": [
+        {
+          "expr": "coordinator_listener_last_block{chain=\"soroban\"}",
+          "legendFormat": "soroban"
+        }
+      ],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] } }
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "HTTP Request Duration (p95)",
+      "gridPos": { "x": 16, "y": 0, "w": 8, "h": 8 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(coordinator_http_request_duration_seconds_bucket[5m])) by (le, route))",
+          "legendFormat": "p95 {{route}}"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "HTTP Request Rate",
+      "gridPos": { "x": 0, "y": 12, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "sum(rate(coordinator_http_request_duration_seconds_count[1m])) by (route, status_code)",
+          "legendFormat": "{{route}} {{status_code}}"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Process Heap Used (MB)",
+      "gridPos": { "x": 12, "y": 12, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "coordinator_process_heap_bytes / 1024 / 1024",
+          "legendFormat": "heap MB"
+        }
+      ]
+    }
+  ]
+}

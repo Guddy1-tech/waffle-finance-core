@@ -1,0 +1,98 @@
+name: ci
+
+on:
+  push:
+    branches: [master, main, v2-rebuild]
+  pull_request:
+    branches: [master, main, v2-rebuild]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  typescript:
+    name: TypeScript build + tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 8.15.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile=false
+
+      - name: Build SDK
+        run: pnpm --filter @stelleth/sdk build
+
+      - name: Typecheck — SDK
+        run: pnpm --filter @stelleth/sdk exec tsc --noEmit
+
+      - name: Typecheck — coordinator
+        run: pnpm --filter @stelleth/coordinator exec tsc --noEmit
+
+      - name: Typecheck — resolver
+        run: pnpm --filter @stelleth/resolver exec tsc --noEmit
+
+      - name: Typecheck — frontend
+        run: pnpm --filter @stelleth/frontend exec tsc --noEmit
+
+      - name: Test — SDK
+        run: pnpm --filter @stelleth/sdk test
+
+      - name: Test — frontend
+        run: pnpm --filter @stelleth/frontend test
+
+      - name: Test — coordinator
+        run: pnpm --filter @stelleth/coordinator test
+
+      - name: Compile contracts
+        run: pnpm --filter @stelleth/contracts compile
+
+      - name: Test — contracts (Hardhat)
+        run: pnpm --filter @stelleth/contracts exec hardhat test test/v2/HTLCEscrow.test.ts test/v2/ResolverRegistry.test.ts
+
+  soroban:
+    name: Soroban contracts
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: soroban
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown,wasm32v1-none
+
+      - name: Install Stellar CLI
+        run: |
+          cargo install --locked stellar-cli --version 22.8.1 || true
+          stellar --version
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            soroban/target
+          key: soroban-${{ runner.os }}-${{ hashFiles('soroban/Cargo.toml', 'soroban/contracts/**/Cargo.toml') }}
+
+      - name: Build WASM
+        run: stellar contract build
+
+      - name: Run unit tests
+        run: cargo test --release
