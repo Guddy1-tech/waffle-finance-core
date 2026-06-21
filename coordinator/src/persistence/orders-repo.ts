@@ -1,5 +1,6 @@
 import { randomBytes } from "node:crypto";
 import type { Database } from "./db.js";
+import { canTransition, isTerminal } from "../state-machine/order-machine.js";
 
 type DatabaseT = Database;
 type Statement = ReturnType<DatabaseT["prepare"]>;
@@ -176,13 +177,16 @@ export class OrdersRepository {
       SET status = :status, updated_at = CAST(strftime('%s','now') AS INTEGER)
       WHERE public_id = :publicId
     `);
+    // Status is computed in TypeScript (see recordSrcLock/recordDstLock) using
+    // the order state machine as the single source of truth, then applied here
+    // as a discrete value rather than via a brittle SQL CASE expression.
     this.updateSrcLock = db.prepare(`
       UPDATE orders SET
         src_order_id = :orderId,
         src_lock_tx = :txHash,
         src_lock_block = :blockNumber,
         src_timelock = :timelock,
-        status = CASE WHEN status = 'announced' THEN 'src_locked' ELSE status END,
+        status = :status,
         updated_at = CAST(strftime('%s','now') AS INTEGER)
       WHERE public_id = :publicId
     `);
@@ -193,7 +197,7 @@ export class OrdersRepository {
         dst_lock_block = :blockNumber,
         dst_timelock = :timelock,
         resolver_address = :resolver,
-        status = CASE WHEN status IN ('announced', 'src_locked') THEN 'dst_locked' ELSE status END,
+        status = :status,
         updated_at = CAST(strftime('%s','now') AS INTEGER)
       WHERE public_id = :publicId
     `);
@@ -274,6 +278,19 @@ export class OrdersRepository {
     await this.run(this.updateStatus, { publicId, status });
   }
 
+  /**
+   * Decide the status an order should hold after recording a lock event.
+   *
+   * The state machine is the source of truth: we only advance the status
+   * when the transition is allowed, otherwise we keep the current status
+   * (so re-recording a lock for an order already past that stage is a
+   * status no-op). Callers must skip terminal orders entirely — see
+   * `recordSrcLock`/`recordDstLock`.
+   */
+  private nextLockStatus(current: OrderStatus, target: OrderStatus): OrderStatus {
+    return canTransition(current, target) ? target : current;
+  }
+
   async recordSrcLock(input: {
     publicId: string;
     orderId: string;
@@ -281,7 +298,15 @@ export class OrdersRepository {
     blockNumber: number;
     timelock: number;
   }): Promise<void> {
-    await this.run(this.updateSrcLock, input);
+    const order = await this.get<OrderDbRow>(this.byPublicId, input.publicId);
+    if (!order) return;
+    // Repeated lock events on a terminal order are a no-op: a completed,
+    // refunded or failed order must never be dragged back into src_locked
+    // under event replay. (`expired` is non-terminal: it falls through to
+    // nextLockStatus, which keeps it expired since the transition is invalid.)
+    if (isTerminal(order.status)) return;
+    const status = this.nextLockStatus(order.status, "src_locked");
+    await this.run(this.updateSrcLock, { ...input, status });
   }
 
   async recordDstLock(input: {
@@ -292,7 +317,15 @@ export class OrdersRepository {
     timelock: number;
     resolver: string | null;
   }): Promise<void> {
-    await this.run(this.updateDstLock, input);
+    const order = await this.get<OrderDbRow>(this.byPublicId, input.publicId);
+    if (!order) return;
+    // Idempotent no-op for terminal orders: a repeated recordDstLock must
+    // not move a completed/refunded/failed order into dst_locked. (`expired`
+    // is non-terminal but still can't transition to dst_locked, so
+    // nextLockStatus keeps it expired.)
+    if (isTerminal(order.status)) return;
+    const status = this.nextLockStatus(order.status, "dst_locked");
+    await this.run(this.updateDstLock, { ...input, status });
   }
 
   async recordSecretRevealed(input: {
