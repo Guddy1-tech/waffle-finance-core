@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, type MockedFunction } from "vitest";
+import { createHash } from "node:crypto";
 import pino from "pino";
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -51,6 +52,12 @@ const VALID_ETH_ADDR = "0x1111111111111111111111111111111111111111";
 const VALID_STELLAR_ADDR = "GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB422";
 const HASHLOCK = "0x" + "a".repeat(64);
 const HASHLOCK2 = "0x" + "b".repeat(64);
+
+// Cryptographically valid (preimage, hashlock) pair used by the OrderClaimed
+// tests — required now that the reconciler validates preimages before writing.
+const VALID_PREIMAGE_BUF = Buffer.alloc(32, 0xcc);
+const VALID_PREIMAGE = "0x" + VALID_PREIMAGE_BUF.toString("hex");
+const VALID_HASHLOCK = "0x" + createHash("sha256").update(VALID_PREIMAGE_BUF).digest("hex");
 
 const BASE_CFG: CoordinatorConfig = {
   network: "testnet",
@@ -168,8 +175,8 @@ describe("Reconciler — Ethereum event replay", () => {
   });
 
   it("replays a missing OrderClaimed event and advances order to secret_revealed", async () => {
-    const order = await seedOrder(orders);
-    // Manually advance to src_locked first
+    // Seed with a hashlock that actually matches VALID_PREIMAGE via sha256.
+    const order = await seedOrder(orders, VALID_HASHLOCK);
     await orders.recordSrcLock({
       publicId: order.publicId,
       orderId: "77",
@@ -185,7 +192,7 @@ describe("Reconciler — Ethereum event replay", () => {
       if (event?.name === "OrderClaimed") {
         return [
           {
-            args: { orderId: 77n, preimage: "0x" + "c".repeat(64) },
+            args: { orderId: 77n, preimage: VALID_PREIMAGE },
             transactionHash: "0xcafe",
             blockNumber: 9100n
           }

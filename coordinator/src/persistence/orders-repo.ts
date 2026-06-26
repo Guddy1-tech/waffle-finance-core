@@ -402,4 +402,32 @@ export class OrdersRepository {
     const dstMax = dstRow?.max_block ?? 0;
     return Math.max(srcMax, dstMax);
   }
+
+  /**
+   * Return orders in `src_locked` or `dst_locked` state that have no preimage
+   * recorded.  These are candidates for secret recovery via on-chain log replay.
+   */
+  async findOrdersMissingSecret(): Promise<
+    { publicId: string; srcOrderId: string | null; hashlock: string; status: string }[]
+  > {
+    const rows = await this.all<{
+      public_id: string;
+      src_order_id: string | null;
+      hashlock: string;
+      status: string;
+    }>(
+      this.db.prepare(`
+        SELECT public_id, src_order_id, hashlock, status
+        FROM orders
+        WHERE status IN ('src_locked', 'dst_locked')
+          AND preimage IS NULL
+      `)
+    );
+    return rows.map((r) => ({
+      publicId: r.public_id,
+      srcOrderId: r.src_order_id,
+      hashlock: r.hashlock,
+      status: r.status,
+    }));
+  }
 }

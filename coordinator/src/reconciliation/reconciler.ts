@@ -17,6 +17,7 @@ import {
   reconciliationLastRun,
   reconciliationEventsReplayed
 } from "../metrics.js";
+import { validatePreimage } from "./secret-reconciler.js";
 
 const ORDER_CREATED = parseAbiItem(
   "event OrderCreated(uint256 indexed orderId, address indexed sender, address indexed beneficiary, address token, uint256 amount, uint256 safetyDeposit, bytes32 hashlock, uint64 timelock)"
@@ -160,6 +161,13 @@ export class Reconciler {
       try {
         const order = await this.orders.findBySrcOrderId("ethereum", args.orderId.toString());
         if (!order || order.preimage) continue;
+        if (!validatePreimage(args.preimage, order.hashlock)) {
+          this.log.warn(
+            { orderId: args.orderId.toString(), hashlock: order.hashlock },
+            "reconciler: ETH OrderClaimed preimage/hashlock mismatch — rejected"
+          );
+          continue;
+        }
         await this.orders.recordSecret(
           order.publicId,
           args.preimage,
@@ -266,6 +274,13 @@ export class Reconciler {
       try {
         const order = await this.orders.findBySrcOrderId("stellar", String(orderId));
         if (!order || order.preimage) return 0;
+        if (!validatePreimage(preimage, order.hashlock)) {
+          this.log.warn(
+            { orderId: String(orderId), hashlock: order.hashlock },
+            "reconciler: Soroban OrderClaimed preimage/hashlock mismatch — rejected"
+          );
+          return 0;
+        }
         await this.orders.recordSecret(order.publicId, preimage, ev.txHash);
         return 1;
       } catch (err: any) {
@@ -374,6 +389,13 @@ export class Reconciler {
       try {
         const order = await this.orders.findBySrcOrderId("solana", orderId);
         if (!order || order.preimage) return 0;
+        if (!validatePreimage(preimage, order.hashlock)) {
+          this.log.warn(
+            { orderId, hashlock: order.hashlock },
+            "reconciler: Solana OrderClaimed preimage/hashlock mismatch — rejected"
+          );
+          return 0;
+        }
         await this.orders.recordSecret(order.publicId, preimage, sig);
         return 1;
       } catch (err: any) {

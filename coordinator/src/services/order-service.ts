@@ -131,4 +131,10 @@ export class OrderService {
   async getLastProcessedBlock(chain: Chain): Promise<number> {
     return this.repo.getLastProcessedBlock(chain);
   }
+
+  findOrdersMissingSecret(): Promise<
+    { publicId: string; srcOrderId: string | null; hashlock: string; status: string }[]
+  > {
+    return this.repo.findOrdersMissingSecret();
+  }
 }
