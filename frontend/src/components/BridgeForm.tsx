@@ -44,10 +44,48 @@ function routeWalletsReady(
   stellar: string,
   solana: string
 ): boolean {
-  if (direction === 'eth_to_sol' || direction === 'sol_to_eth') {
-    return Boolean(eth && solana);
+  switch (direction) {
+    case 'eth_to_sol':
+    case 'sol_to_eth':
+      return Boolean(eth && solana);
+    case 'xlm_to_sol':
+    case 'sol_to_xlm':
+      return Boolean(eth && stellar && solana);
+    default:
+      // eth_to_xlm, xlm_to_eth
+      return Boolean(eth && stellar);
   }
-  return Boolean(eth && stellar);
+}
+
+/**
+ * Returns a human-readable reason why a route cannot be selected with the
+ * currently connected wallets, or null when the route is available.
+ *
+ * Used to populate route-selector button tooltips and disabled states so
+ * users see exactly which wallet they need to connect before a route becomes
+ * available.
+ */
+export function getUnsupportedRouteReason(
+  direction: BridgeDirection,
+  eth: string,
+  stellar: string,
+  solana: string
+): string | null {
+  const needsStellar =
+    direction === 'eth_to_xlm' || direction === 'xlm_to_eth' ||
+    direction === 'xlm_to_sol' || direction === 'sol_to_xlm';
+  const needsSolana =
+    direction === 'eth_to_sol' || direction === 'sol_to_eth' ||
+    direction === 'xlm_to_sol' || direction === 'sol_to_xlm';
+
+  const missing: string[] = [];
+  if (!eth) missing.push('Ethereum wallet');
+  if (needsStellar && !stellar) missing.push('Stellar wallet');
+  if (needsSolana && !solana) missing.push('Solana wallet');
+
+  return missing.length > 0
+    ? `Connect ${missing.join(' and ')} to use this route`
+    : null;
 }
 
 const ETH_TO_XLM_RATE = 10000;
@@ -408,8 +446,12 @@ export default function BridgeForm({ ethAddress, stellarAddress, solanaAddress, 
     prevStellarRef.current = stellarAddress;
     prevSolanaRef.current = solana;
 
-    const needsStellar = direction === 'eth_to_xlm' || direction === 'xlm_to_eth';
-    const needsSolana = direction === 'eth_to_sol' || direction === 'sol_to_eth';
+    const needsStellar =
+      direction === 'eth_to_xlm' || direction === 'xlm_to_eth' ||
+      direction === 'xlm_to_sol' || direction === 'sol_to_xlm';
+    const needsSolana =
+      direction === 'eth_to_sol' || direction === 'sol_to_eth' ||
+      direction === 'xlm_to_sol' || direction === 'sol_to_xlm';
 
     const dropped: string[] = [];
     if (ethDropped) dropped.push('Ethereum');
@@ -1266,11 +1308,12 @@ export default function BridgeForm({ ethAddress, stellarAddress, solanaAddress, 
     setOrderId(null);
   };
 
-  // Check if wallets are connected
-  const isSolanaDirection = direction === 'eth_to_sol' || direction === 'sol_to_eth';
-  const walletsConnected = isSolanaDirection
-    ? (direction === 'eth_to_sol' ? (ethAddress && solanaAddress) : (solanaAddress && ethAddress))
-    : (ethAddress && stellarAddress);
+  // Check if wallets are connected. isSolanaDirection covers all routes that
+  // involve the Solana chain, including xlm_to_sol and sol_to_xlm.
+  const isSolanaDirection =
+    direction === 'eth_to_sol' || direction === 'sol_to_eth' ||
+    direction === 'xlm_to_sol' || direction === 'sol_to_xlm';
+  const walletsConnected = routeWalletsReady(direction, ethAddress, stellarAddress, solanaAddress ?? '');
 
   return (
     <div className="w-full rounded-[1.25rem] p-4 swap-card-bg swap-card-border md:p-5 lg:p-6">
@@ -1336,16 +1379,34 @@ export default function BridgeForm({ ethAddress, stellarAddress, solanaAddress, 
               };
               const isSol = d === 'eth_to_sol' || d === 'sol_to_eth';
               const active = direction === d;
+              const unsupportedReason = getUnsupportedRouteReason(
+                d, ethAddress, stellarAddress, solanaAddress ?? ''
+              );
+              // A non-active route is disabled when the required wallets are absent.
+              // The active route is never disabled so the current selection remains
+              // visible even while a wallet is reconnecting.
+              const isDisabled = Boolean(unsupportedReason) && !active;
               return (
                 <button
                   key={d}
                   type="button"
-                  onClick={() => { setDirection(d); setAmount(''); setEstimatedAmount(''); }}
+                  disabled={isDisabled}
+                  title={unsupportedReason ?? undefined}
+                  aria-disabled={isDisabled}
+                  onClick={() => {
+                    if (!unsupportedReason) {
+                      setDirection(d);
+                      setAmount('');
+                      setEstimatedAmount('');
+                    }
+                  }}
                   className={`flex-1 rounded-lg px-2 py-1.5 text-[0.65rem] font-semibold transition ${
                     active
                       ? isSol
                         ? 'bg-purple-500/25 text-purple-200 border border-purple-500/30'
                         : 'bg-[#4f6bff]/25 text-[#a8b4ff] border border-[#4f6bff]/30'
+                      : isDisabled
+                      ? 'text-slate-700 cursor-not-allowed'
                       : 'text-slate-500 hover:text-slate-300'
                   }`}
                 >
