@@ -71,11 +71,12 @@ async function main(): Promise<void> {
   const ethListener = new EthereumListener(cfg, orders, log);
   const sorobanListener = new SorobanListener(cfg, orders, log);
   const solanaListener = new SolanaListener(cfg, orders, log);
-  await Promise.all([
-    retryAsync(() => ethListener.start()),
-    retryAsync(() => sorobanListener.start()),
-    retryAsync(() => solanaListener.start()),
-  ]);
+  // Listener start methods launch their own long-running polling loops and
+  // return immediately. Retrying these synchronous calls cannot observe
+  // failures from those internally retried background loops.
+  ethListener.start();
+  sorobanListener.start();
+  solanaListener.start();
 
   const shutdown = async (signal: string) => {
     log.info({ signal }, "shutting down");
