@@ -21,7 +21,6 @@
 
 WaffleFinance locks funds in Hash Time-Lock Contracts (HTLCs) on each chain simultaneously. Settlement is a `sha256` preimage reveal — not a multisig, not an attester signature.
 
-
 If anything fails — coordinator down, resolver offline, RPC unavailable, frontend unreachable — locked funds either settle to the beneficiary or refund permissionlessly to the user. There is no state where funds are stuck under operator control.
 
 > **Status:** Live on testnet (Sepolia + Stellar testnet). Solana support is live in simulation mode — full settlement activates once the Anchor HTLC program is deployed on devnet. Mainnet gated until independent audit (Q1 2027).
