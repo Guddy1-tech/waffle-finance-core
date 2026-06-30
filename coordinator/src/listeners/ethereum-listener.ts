@@ -4,6 +4,7 @@ import type { Logger } from "pino";
 import type { CoordinatorConfig } from "../config.js";
 import type { OrderService } from "../services/order-service.js";
 import { observeListenerEventProcessing, recordListenerProgress, listenerLastBlock } from "../metrics.js";
+import { KeyedMutex } from "../utils/concurrency.js";
 
 const ORDER_CREATED = parseAbiItem(
   "event OrderCreated(uint256 indexed orderId, address indexed sender, address indexed beneficiary, address token, uint256 amount, uint256 safetyDeposit, bytes32 hashlock, uint64 timelock)"
@@ -19,6 +20,7 @@ export class EthereumListener {
   private readonly client: PublicClient;
   private readonly log: Logger;
   private unwatchers: Array<() => void> = [];
+  private orderMutex = new KeyedMutex();
 
   constructor(
     private readonly cfg: CoordinatorConfig,
@@ -74,27 +76,29 @@ export class EthereumListener {
       }
       const hashlock = log.args.hashlock!;
       try {
-        const order = await this.orders.findByHashlock(hashlock);
-        if (!order) {
-          this.log.info(
-            { hashlock, orderId: log.args.orderId?.toString() },
-            "ETH order observed without local announce"
-          );
-          continue;
-        }
+        await this.orderMutex.runExclusive(hashlock, async () => {
+          const order = await this.orders.findByHashlock(hashlock);
+          if (!order) {
+            this.log.info(
+              { hashlock, orderId: log.args.orderId?.toString() },
+              "ETH order observed without local announce"
+            );
+            return;
+          }
 
-        if (log.removed) {
-          this.log.warn({ hashlock, txHash: log.transactionHash }, "ETH OrderCreated event removed due to reorg");
-          await this.orders.rollbackSrcLock(order.publicId);
-          continue;
-        }
+          if (log.removed) {
+            this.log.warn({ hashlock, txHash: log.transactionHash }, "ETH OrderCreated event removed due to reorg");
+            await this.orders.rollbackSrcLock(order.publicId);
+            return;
+          }
 
-        await this.orders.recordSrcLock({
-          publicId: order.publicId,
-          orderId: log.args.orderId!.toString(),
-          txHash: log.transactionHash,
-          blockNumber: Number(log.blockNumber),
-          timelock: Number(log.args.timelock!)
+          await this.orders.recordSrcLock({
+            publicId: order.publicId,
+            orderId: log.args.orderId!.toString(),
+            txHash: log.transactionHash,
+            blockNumber: Number(log.blockNumber),
+            timelock: Number(log.args.timelock!)
+          });
         });
       } catch (err) {
         this.log.warn({ err, hashlock }, "could not process src lock");
@@ -117,28 +121,30 @@ export class EthereumListener {
               }
               const hashlock = log.args.hashlock!;
               try {
-                const order = await this.orders.findByHashlock(hashlock);
-                if (!order) {
-                  this.log.info(
-                    { hashlock, orderId: log.args.orderId?.toString() },
-                    "ETH order observed without local announce"
-                  );
-                  continue;
-                }
-                if (log.removed) {
-                  this.log.warn(
-                    { hashlock, txHash: log.transactionHash },
-                    "ETH OrderCreated event removed due to reorg"
-                  );
-                  await this.orders.rollbackSrcLock(order.publicId);
-                  continue;
-                }
-                await this.orders.recordSrcLock({
-                  publicId: order.publicId,
-                  orderId: log.args.orderId!.toString(),
-                  txHash: log.transactionHash,
-                  blockNumber: Number(log.blockNumber),
-                  timelock: Number(log.args.timelock!)
+                await this.orderMutex.runExclusive(hashlock, async () => {
+                  const order = await this.orders.findByHashlock(hashlock);
+                  if (!order) {
+                    this.log.info(
+                      { hashlock, orderId: log.args.orderId?.toString() },
+                      "ETH order observed without local announce"
+                    );
+                    return;
+                  }
+                  if (log.removed) {
+                    this.log.warn(
+                      { hashlock, txHash: log.transactionHash },
+                      "ETH OrderCreated event removed due to reorg"
+                    );
+                    await this.orders.rollbackSrcLock(order.publicId);
+                    return;
+                  }
+                  await this.orders.recordSrcLock({
+                    publicId: order.publicId,
+                    orderId: log.args.orderId!.toString(),
+                    txHash: log.transactionHash,
+                    blockNumber: Number(log.blockNumber),
+                    timelock: Number(log.args.timelock!)
+                  });
                 });
               } catch (err) {
                 this.log.warn({ err, hashlock }, "could not record src lock");
