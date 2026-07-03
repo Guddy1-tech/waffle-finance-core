@@ -32,7 +32,7 @@ export class EthereumListener {
     });
   }
 
-  start(): void {
+  async start(): Promise<void> {
     if (!this.cfg.ethereum.htlcEscrow) {
       this.log.warn("ETH_HTLC_ESCROW not configured - Ethereum listener disabled");
       return;
@@ -40,7 +40,7 @@ export class EthereumListener {
     const address = this.cfg.ethereum.htlcEscrow;
     this.log.info({ contract: address }, "starting");
 
-    void (async () => {
+    return (async () => {
       try {
         const lastBlock = await this.orders.getLastProcessedBlock("ethereum");
         const latest = await this.client.getBlockNumber();

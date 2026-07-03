@@ -16,14 +16,6 @@
     "rootDir": "./",
     "baseUrl": ".",
     "types": ["mocha", "chai", "node"],
-    "paths": {
-      "@nomicfoundation/hardhat-ethers/signers": [
-        "../node_modules/.pnpm/node_modules/@nomicfoundation/hardhat-ethers/signers.d.ts"
-      ],
-      "@nomicfoundation/hardhat-network-helpers": [
-        "../node_modules/.pnpm/node_modules/@nomicfoundation/hardhat-network-helpers/dist/src/index.d.ts"
-      ]
-    },
     "typeRoots": [
       "./node_modules/@types",
       "../node_modules/@types",
@@ -34,7 +26,8 @@
     "./hardhat.config.ts",
     "./scripts/**/*",
     "./test/**/*",
-    "./contracts/**/*"
+    "./contracts/**/*",
+    "./types/**/*"
   ],
   "exclude": [
     "node_modules",

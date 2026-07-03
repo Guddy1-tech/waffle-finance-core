@@ -25,7 +25,7 @@ export class SorobanListener {
     });
   }
 
-  start(): void {
+  async start(): Promise<void> {
     if (!this.cfg.soroban.htlcContract) {
       this.log.warn("SOROBAN_HTLC contract not configured - Soroban listener disabled");
       return;

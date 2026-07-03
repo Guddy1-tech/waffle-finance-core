@@ -26,7 +26,7 @@ export class SolanaListener {
     this.connection = new Connection(cfg.solana.rpcUrl, cfg.solana.commitment);
   }
 
-  start(): void {
+  async start(): Promise<void> {
     if (!this.cfg.solana.programId || this.cfg.solana.programId === "PLACEHOLDER") {
       this.log.warn("SOLANA_HTLC_PROGRAM not configured - Solana listener disabled");
       return;

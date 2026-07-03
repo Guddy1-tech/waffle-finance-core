@@ -16,4 +16,15 @@
     "noUncheckedIndexedAccess": false,
     "noImplicitOverride": false
   }
+  ,
+  "exclude": [
+    "node_modules",
+    "dist",
+    "**/node_modules",
+    "**/dist",
+    "**/artifacts",
+    "**/typechain-types",
+    "contracts/typechain-types",
+    "frontend"
+  ]
 }

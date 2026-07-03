@@ -26,7 +26,7 @@ async function getDeployedContractInfo(contractName: string, address: string): P
   }
 
   const contract = await ethers.getContractAt(contractName, address);
-  const abi = contract.interface.format(ethers.FormatTypes.full as any) as string[];
+  const abi = contract.interface.format('full' as any) as string[];
   const bytecodeHash = ethers.keccak256(code);
 
   return { address, abi, bytecodeHash };
@@ -59,12 +59,7 @@ async function validateUpgradeCompatibility(
   deployedAddress: string
 ): Promise<ContractCompatibility> {
   const contractFactory = await ethers.getContractFactory(contractName);
-  const currentAbi = contractFactory.interface.format(ethers.FormatTypes.full as any) as string[];
-  const currentSource = await ethers.provider.getContract(
-    contractName === "HTLCEscrow"
-      ? ((await ethers.getContractAt(contractName, deployedAddress)) as any)
-      : null
-  );
+  const currentAbi = contractFactory.interface.format('full' as any) as string[];
 
   const deployed = await getDeployedContractInfo(contractName, deployedAddress);
   const issues = compareAbis(currentAbi, deployed.abi);

@@ -53,9 +53,6 @@ export class SorobanListener {
     const latest = await retryRpcCall(
       () => this.server.getLatestLedger(),
       {
-        maxAttempts: this.cfg.rpc.maxRetries,
-        baseDelayMs: this.cfg.rpc.baseDelayMs,
-        maxDelayMs: this.cfg.rpc.maxDelayMs,
         logger: this.log,
       }
     );
@@ -76,9 +73,6 @@ export class SorobanListener {
     const events = await retryRpcCall(
       () => this.server.getEvents(req),
       {
-        maxAttempts: this.cfg.rpc.maxRetries,
-        baseDelayMs: this.cfg.rpc.baseDelayMs,
-        maxDelayMs: this.cfg.rpc.maxDelayMs,
         logger: this.log,
       }
     );
